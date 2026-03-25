@@ -4,23 +4,6 @@
  *
  * Ported from the Arduino j1850 library by redheadedrod / GarnerM.
  *
- * Hardware requirements
- * ---------------------
- *  - One GPIO input  pin connected to the J1850 VPW bus (via comparator / level shifter)
- *  - One GPIO output pin driving the bus active state
- *
- * Configure both pins as plain GPIO in CubeMX (no alternate function needed).
- * Pass the GPIO port and pin defines from your CubeMX-generated main.h to J1850_init().
- *
- * Timing
- * ------
- * Uses SysTick for pulse-width measurement and a NOP spin-loop for delays.
- * Both are Cortex-M0 compatible — no DWT required.
- *
- * IMPORTANT: set SYSCLK_MHZ to match your actual CPU clock before building.
- * The default is 48 MHz.  Override it in your Makefile / project defines or
- * by adding  #define SYSCLK_MHZ 48u  before including this header.
- *
  * Usage
  * -----
  *   #include "j1850vpw.h"

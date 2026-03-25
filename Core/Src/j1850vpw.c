@@ -2,7 +2,7 @@
  * @file j1850vpw.c
  * @brief J1850 VPW driver for STM32 CubeIDE (pure C, HAL-based)
  *
- * Ported from the Arduino j1850 library by redheadedrod / GarnerM.
+ * Ported from the Arduino j1850 library.
  *
  * Arduino -> STM32 mapping
  * ------------------------
@@ -13,20 +13,6 @@
  *  pinMode()             -> handled by CubeMX / MX_GPIO_Init()
  *  Serial.print()        -> Serial_print() from serial.h
  *
- * Timing notes (Cortex-M0)
- * ------------------------
- * Cortex-M0 has no DWT cycle counter, so we use two approaches:
- *
- *  delay_us()   — NOP spin-loop calibrated to SYSCLK_MHZ.
- *                 Each loop iteration is ~4 cycles on M0 (no pipeline).
- *                 Adjust SYSCLK_MHZ if your clock differs from 48 MHz.
- *
- *  start_timer() / read_timer_us()
- *               — SysTick snapshot for measuring pulse widths.
- *                 SysTick counts DOWN from LOAD to 0 at SYSCLK rate.
- *                 Handles the single wrap that can occur between
- *                 start_timer() and read_timer_us() for pulses up to
- *                 ~89 ms at 48 MHz (LOAD = 47999 for 1 ms tick).
  */
 #include "protocol.h"
 #include "j1850vpw.h"
@@ -40,19 +26,6 @@
 #define SYSCLK_MHZ      24u     /* default: 24 MHz - override in project defines if different */
 #endif
 #define CYCLES_PER_US   SYSCLK_MHZ
-
-/* ------------------------------------------------------------------ */
-/*  SysTick microsecond timer and delay                                */
-/*                                                                     */
-/*  SysTick->VAL counts DOWN from SysTick->LOAD to 0, then reloads.  */
-/*  We use it for BOTH delay_us() and pulse-width measurement so that */
-/*  everything is driven by the same hardware source and there is no  */
-/*  NOP calibration problem regardless of clock speed or wait states. */
-/*                                                                     */
-/*  Maximum measurable interval before wrap ambiguity:                */
-/*    At 24 MHz with 1 ms HAL tick: LOAD = 23999 cycles = 1000 us    */
-/*  All J1850 timings are well under 1 ms so one wrap is all we need. */
-/* ------------------------------------------------------------------ */
 
 /** Internal: cycles elapsed since a SysTick snapshot value. */
 static uint32_t systick_elapsed_cycles(uint32_t snapshot)
@@ -132,9 +105,7 @@ uint8_t J1850_crc(uint8_t *msg_buf, int nbytes)
  *
  * Format: [ STX | LEN | CMD_RECV | data bytes... | ETX ]
  *   LEN = 1 (CMD byte) + nbytes
- *   CMD = CMD_RECV (0x10) — tells the L4 this is an inbound J1850 frame
- *
- * The L4's CalCmd_ParseRxBuffer expects this exact layout.
+ *   CMD = CMD_RECV (0x10) — tells us this is an inbound J1850 frame
  */
 static void send_to_serial(J1850 *bus, int nbytes, uint8_t *buf)
 {

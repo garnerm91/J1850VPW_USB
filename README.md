@@ -19,6 +19,7 @@ The device will respond with an ACK = `0x06` or NACK = `0x15`.
 |------|-------------|------|
 | 0x01 | RX Mode     | `0x01` = enable, `0x00` = disable |
 | 0x02 | Send frame  | J1850 bytes (CRC appended automatically) |
+
 This is all in hex not ascii
 
 ## Credit

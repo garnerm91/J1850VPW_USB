@@ -19,7 +19,6 @@
  *
  *       #include "serial.h"
  *       extern UART_HandleTypeDef huart2;   // CubeMX-generated
- *       SerialPort Serial2;                 // our driver instance
  *
  *  4. In main.c, after MX_USART2_UART_Init(), inside USER CODE BEGIN 2:
  *

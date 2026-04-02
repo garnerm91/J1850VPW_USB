@@ -14,13 +14,20 @@
 
 static void send_ack(SerialPort *port)
 {
-    uint8_t frame[] = { S_STX, 0x00, S_ACK, S_ETX };
+    uint8_t frame[] = { S_STX, 0x01, S_ACK, S_ETX };
     Serial_write(port, frame, sizeof(frame));
 }
 
 static void send_nack(SerialPort *port)
 {
-    uint8_t frame[] = { S_STX, 0x00, S_NACK, S_ETX };
+    uint8_t frame[] = { S_STX, 0x01, S_NACK, S_ETX };
+    Serial_write(port, frame, sizeof(frame));
+}
+
+
+static void send_identify_ack(SerialPort *port)
+{
+    uint8_t frame[] = { S_STX, 0x02, S_ACK, DEVICE_ID, S_ETX };
     Serial_write(port, frame, sizeof(frame));
 }
 
@@ -60,6 +67,11 @@ static void handle_send(SerialPort *port, J1850 *bus, uint8_t *data, uint8_t len
     } else {
         send_nack(port);
     }
+}
+
+static void handle_identify(SerialPort *port)
+{
+    send_identify_ack(port);
 }
 
 /* ------------------------------------------------------------------ */
@@ -123,6 +135,9 @@ void Protocol_process(ProtocolParser *parser, SerialPort *port, J1850 *bus)
                     break;
                 case CMD_SEND:
                     handle_send(port, bus, parser->buf, parser->count);
+                    break;
+                case CMD_IDENTIFY:
+                    handle_identify(port);
                     break;
                 default:
                     send_nack(port);

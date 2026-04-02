@@ -32,6 +32,9 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #define LEDpin (GPIO_PIN_0)
+// Device ID in Protocol.H!!
+
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

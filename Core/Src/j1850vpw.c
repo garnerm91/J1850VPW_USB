@@ -2,7 +2,7 @@
  * @file j1850vpw.c
  * @brief J1850 VPW driver for STM32 CubeIDE (pure C, HAL-based)
  *
- * Ported from the Arduino j1850 library.
+ * Ported from the Arduino j1850 library by redheadedrod / GarnerM.
  *
  * Arduino -> STM32 mapping
  * ------------------------
@@ -12,7 +12,7 @@
  *  digitalRead(pin)      -> HAL_GPIO_ReadPin(port, pin)
  *  pinMode()             -> handled by CubeMX / MX_GPIO_Init()
  *  Serial.print()        -> Serial_print() from serial.h
- *
+
  */
 #include "protocol.h"
 #include "j1850vpw.h"
@@ -27,7 +27,6 @@
 #endif
 #define CYCLES_PER_US   SYSCLK_MHZ
 
-/** Internal: cycles elapsed since a SysTick snapshot value. */
 static uint32_t systick_elapsed_cycles(uint32_t snapshot)
 {
     uint32_t now  = SysTick->VAL;
@@ -105,7 +104,8 @@ uint8_t J1850_crc(uint8_t *msg_buf, int nbytes)
  *
  * Format: [ STX | LEN | CMD_RECV | data bytes... | ETX ]
  *   LEN = 1 (CMD byte) + nbytes
- *   CMD = CMD_RECV (0x10) — tells us this is an inbound J1850 frame
+ *   CMD = CMD_RECV (0x10)
+ *
  */
 static void send_to_serial(J1850 *bus, int nbytes, uint8_t *buf)
 {
@@ -278,7 +278,7 @@ void J1850_init(J1850       *bus,
     bus->serial   = serial;
     bus->rxEnabled = 0;   /* RX forwarding disabled by default */
 
-    bus_passive(bus);   /* ensure bus starts in passive (recessive) state */
+    bus_passive(bus);
 }
 
 bool J1850_accept(J1850 *bus, uint8_t *msg_buf, bool check_crc)
@@ -302,9 +302,6 @@ bool J1850_send(J1850 *bus, uint8_t *msg_buf, int nbytes)
         bus->message = J1850_ERR_MSG_TOO_LONG;
         return false;
     }
-
-    /* Copy into internal buffer so we can append CRC without
-     * modifying the caller's array */
     memcpy(bus->tx_buf, msg_buf, (size_t)nbytes);
     bus->tx_buf[nbytes] = J1850_crc(bus->tx_buf, nbytes);
     nbytes++;

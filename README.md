@@ -1,5 +1,5 @@
 # J1850VPW_USB
-STM32C0 firmware that acts as a serial-to-J1850 VPW bridge.
+STM32C0 firmware that acts as a serial-to-J1850 VPW bridge. While this is used on the USB devkit, it's the same firmware on the 99-02 swap box J1850VPW side and the CAN-to-J1850VPW bridge. The C0 isn't used as a USB device; it's just a serial port. 
 Built with STM32 CubeIDE, pure C, HAL-based. Based on Redheadedrod's
 
 ## Hardware

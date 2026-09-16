@@ -53,7 +53,9 @@ extern "C" {
 #define J1850_RX_SOF_MAX      239u
 #define J1850_RX_EOD_MIN      163u
 #define J1850_RX_IFS_MIN      280u
-#define J1850_MAX_MSG_SIZE     12u   /* 12 bytes including CRC */
+#define J1850_MAX_MSG_SIZE     12u
+#define J1850_FRAME_MAX_US	  20000u
+
 
 /* ------------------------------------------------------------------ */
 /*  Status / error codes                                               */
@@ -66,6 +68,8 @@ extern "C" {
 #define J1850_ERR_NOT_SOF               6
 #define J1850_ERR_NOT_SHORT             7
 #define J1850_ERR_CRC                   8
+#define J1850_ERR_FRAME_TIMEOUT         9
+#define J1850_ERR_MSG_TOO_SHORT         10
 
 /* ------------------------------------------------------------------ */
 /*  Driver state struct  — one per bus                                 */
@@ -150,7 +154,7 @@ void J1850_setRxEnabled(J1850 *bus, int enabled);
  * Exposed publicly so the protocol layer can verify received frames if needed.
  */
 uint8_t J1850_crc(uint8_t *msg_buf, int nbytes);
-
+extern TIM_HandleTypeDef htim14;
 #ifdef __cplusplus
 }
 #endif

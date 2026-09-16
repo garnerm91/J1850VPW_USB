@@ -83,13 +83,44 @@ void NMI_Handler(void)
   */
 void HardFault_Handler(void)
 {
-  /* USER CODE BEGIN HardFault_IRQn 0 */
+  __asm volatile
+  (
+    " movs r0, #4       \n"
+    " mov r1, lr        \n"
+    " tst r0, r1        \n"
+    " beq _msp          \n"
+    " mrs r0, psp        \n"
+    " b _hardfault_c    \n"
+    "_msp:               \n"
+    " mrs r0, msp        \n"
+    "_hardfault_c:        \n"
+    " ldr r1, =HardFault_C_Handler \n"
+    " bx r1              \n"
+  );
+}
 
-  /* USER CODE END HardFault_IRQn 0 */
-  while (1)
-  {
-    /* USER CODE BEGIN W1_HardFault_IRQn 0 */
-    /* USER CODE END W1_HardFault_IRQn 0 */
+void HardFault_C_Handler(uint32_t *stackedRegs)
+{
+  volatile uint32_t r0  = stackedRegs[0];
+  volatile uint32_t r1  = stackedRegs[1];
+  volatile uint32_t r2  = stackedRegs[2];
+  volatile uint32_t r3  = stackedRegs[3];
+  volatile uint32_t r12 = stackedRegs[4];
+  volatile uint32_t lr  = stackedRegs[5];
+  volatile uint32_t pc  = stackedRegs[6];
+  volatile uint32_t psr = stackedRegs[7];
+  volatile uint32_t live_msp = __get_MSP();
+  volatile uint32_t live_psp = __get_PSP();
+  volatile uint32_t live_control = __get_CONTROL();
+
+  (void)r0; (void)r1; (void)r2; (void)r3; (void)r12; (void)lr; (void)psr;
+  NVIC_SystemReset();
+  while (1) {
+    /* Set a breakpoint HERE.
+     * Inspect 'pc' in the debugger — that's your faulting instruction address.
+     * Cross-reference it against your .map file or disassembly to find
+     * which line of C code it corresponds to.
+     */
   }
 }
 

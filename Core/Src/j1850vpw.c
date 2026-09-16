@@ -27,6 +27,9 @@
 #endif
 #define CYCLES_PER_US   SYSCLK_MHZ
 
+#define J1850_FRAME_ELAPSED_US(start) \
+	((uint16_t)(__HAL_TIM_GET_COUNTER(&htim14) - (start)))
+
 static uint32_t systick_elapsed_cycles(uint32_t snapshot)
 {
     uint32_t now  = SysTick->VAL;
@@ -134,18 +137,28 @@ static void monitor(J1850 *bus)
 /*  Low-level receive                                                  */
 /* ------------------------------------------------------------------ */
 
+
+
 static bool recv_msg(J1850 *bus, uint8_t *msg_buf)
 {
-    int     nbits, nbytes;
-    bool    bit_state;
+    int      nbits, nbytes;
+    bool     bit_state;
+    uint32_t frame_start;
 
     bus->rx_msg_buf = msg_buf;
+
+
+    frame_start = __HAL_TIM_GET_COUNTER(&htim14);   /* Frame escape watchdog*/
 
     /* Wait for bus to go active (SOF start) */
     start_timer(bus);
     while (!bus_is_active(bus)) {
         if (read_timer_us(bus) > J1850_WAIT_100US) {
             bus->message = J1850_ERR_NO_RESPONSE_100US;
+            return false;
+        }
+        if (J1850_FRAME_ELAPSED_US(frame_start) > J1850_FRAME_MAX_US) {
+            bus->message = J1850_ERR_FRAME_TIMEOUT;
             return false;
         }
     }
@@ -155,6 +168,10 @@ static bool recv_msg(J1850 *bus, uint8_t *msg_buf)
     while (bus_is_active(bus)) {
         if (read_timer_us(bus) > J1850_RX_SOF_MAX) {
             bus->message = J1850_ERR_SOF_TIMEOUT;
+            return false;
+        }
+        if (J1850_FRAME_ELAPSED_US(frame_start) > J1850_FRAME_MAX_US) {
+            bus->message = J1850_ERR_FRAME_TIMEOUT;
             return false;
         }
     }
@@ -167,6 +184,11 @@ static bool recv_msg(J1850 *bus, uint8_t *msg_buf)
     bit_state = bus_is_active(bus);
     start_timer(bus);
 
+    if (J1850_FRAME_ELAPSED_US(frame_start) > J1850_FRAME_MAX_US) {
+        bus->message = J1850_ERR_FRAME_TIMEOUT;
+        return false;
+    }
+
     for (nbytes = 0; nbytes < J1850_MAX_MSG_SIZE; ++nbytes) {
         nbits = 8;
         do {
@@ -178,6 +200,10 @@ static bool recv_msg(J1850 *bus, uint8_t *msg_buf)
                     bus->rx_nbyte = nbytes;
                     bus->message  = J1850_MSG_ACCEPT_OK;
                     return true;
+                }
+                if (J1850_FRAME_ELAPSED_US(frame_start) > J1850_FRAME_MAX_US) {
+                    bus->message = J1850_ERR_FRAME_TIMEOUT;
+                    return false;
                 }
             }
 
@@ -200,6 +226,11 @@ static bool recv_msg(J1850 *bus, uint8_t *msg_buf)
                 bus_is_active(bus))
                 *msg_buf |= 1u;
 
+            if (J1850_FRAME_ELAPSED_US(frame_start) > J1850_FRAME_MAX_US) {
+                bus->message = J1850_ERR_FRAME_TIMEOUT;
+                return false;
+            }
+
         } while (--nbits);
         ++msg_buf;
     }
@@ -208,7 +239,6 @@ static bool recv_msg(J1850 *bus, uint8_t *msg_buf)
     bus->message  = J1850_MSG_ACCEPT_OK;
     return true;
 }
-
 /* ------------------------------------------------------------------ */
 /*  Low-level transmit                                                 */
 /* ------------------------------------------------------------------ */
@@ -286,7 +316,10 @@ bool J1850_accept(J1850 *bus, uint8_t *msg_buf, bool check_crc)
     bool ok = recv_msg(bus, msg_buf);
 
     if (check_crc && ok) {
-        if (msg_buf[bus->rx_nbyte - 1] != J1850_crc(msg_buf, bus->rx_nbyte - 1)) {
+        if (bus->rx_nbyte < 1) {
+            ok = false;
+            bus->message = J1850_ERR_MSG_TOO_SHORT;   /* new error code, see below */
+        } else if (msg_buf[bus->rx_nbyte - 1] != J1850_crc(msg_buf, bus->rx_nbyte - 1)) {
             ok = false;
             bus->message = J1850_ERR_CRC;
         }
